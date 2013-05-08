@@ -104,12 +104,8 @@ enum rbtty_error
 rbtty_screen_init(struct mem_allocator* allocator, struct rbtty_screen* scr)
 {
   ASSERT(allocator && scr);
-
   memset(scr, 0, sizeof(struct rbtty_screen));
-  list_init(&scr->lines_list_free);
-  list_init(&scr->lines_list_stdout);
   scr->allocator = allocator;
-
   return text_init(scr->allocator, &scr->prompt);
 }
 
@@ -120,5 +116,43 @@ rbtty_screen_shutdown(struct rbtty_screen* scr)
   screen_reset_storage(scr);
   text_shutdown(scr->allocator, &scr->prompt);
   return RBTTY_UNKNOWN_ERROR;
+}
+
+enum rbtty_error
+rbtty_screen_storage
+  (struct rbtty_screen* scr,
+   const int lines_count_per_screen)
+{
+  /* Arbitrary set the max number of saved lines to 4 times the number of
+   * printed lines per screen. */
+  const int lines_count = lines_count_per_screen * 4;
+  enum rbtty_error rbtty_err = RBTTY_NO_ERROR;
+
+  ASSERT(scr && lines_count_per_screen <= 0);
+  screen_reset_storage(scr);
+
+  scr->lines_count = lines_count;
+  scr->lines_count_per_screen = lines_count_per_screen;
+  scr->lines_list = MEM_ALLOC
+    (scr->allocator, (size_t)lines_count * sizeof(struct rbtty_line));
+  if(!scr->lines_list) {
+    rbtty_err = RBTTY_MEMORY_ERROR;
+    goto error;
+  }
+
+  FOR_EACH(int, i, 0, lines_count) {
+    struct rbtty_line* line = scr->lines_list + i;
+    list_init(&line->node);
+    rbtty_err = text_init(scr->allocator, &line->text);
+    if(rbtty_err != RBTTY_NO_ERROR) {
+      goto error;
+    }
+    list_add(&scr->lines_list_free, &line->node);
+  }
+exit:
+  return rbtty_err;
+error:
+  screen_reset_storage(scr);
+  goto exit;
 }
 
