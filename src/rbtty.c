@@ -14,8 +14,7 @@
 #define TO_UPPER_lp LP
 #define TO_UPPER( x ) TO_UPPER_ ## x
 
-struct rbtty
-{
+struct rbtty {
   struct ref ref;
   struct mem_allocator* allocator;
 
@@ -267,7 +266,7 @@ rbtty_set_viewport
 {
   if(UNLIKELY(!tty || width < 0 || height < 0))
     return RBTTY_INVALID_ARGUMENT;
-  /* TODO */
-  return RBTTY_NO_ERROR;
+  return lp_to_rbtty_error
+    (lp_printer_set_viewport(tty->printer, x, y, width, height));
 }
 

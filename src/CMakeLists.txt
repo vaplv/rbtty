@@ -33,25 +33,36 @@ endmacro()
 check_dependency(font-rsrc font_rsrc.h)
 check_dependency(lp lp/lp.h)
 check_dependency(rbi rb/rbi.h)
+check_dependency(sl sl/sl.h)
 check_dependency(snlsys snlsys/snlsys.h)
 
 check_dependency(font-rsrc-dbg font_rsrc.h)
 check_dependency(lp-dbg lp/lp.h)
+check_dependency(sl-dbg sl/sl.h)
 check_dependency(snlsys-dbg snlsys/snlsys.h)
 
 ################################################################################
 # Target
 ################################################################################
-set(RBTTY_FILES_INC rbtty.h)
-set(RBTTY_FILES_SRC rbtty.c)
+set(RBTTY_FILES_INC rbtty_error.h rbtty_screen.h rbtty.h)
+set(RBTTY_FILES_SRC rbtty_screen.c rbtty.c)
+
 add_library(rbtty SHARED ${RBTTY_FILES_SRC} ${RBTTY_FILES_INC})
+
 target_link_libraries(rbtty debug 
-  ${font-rsrc-dbg_LIBRARY} ${lp-dbg_LIBRARY} ${snlsys-dbg_LIBRARY})
+  ${font-rsrc-dbg_LIBRARY} 
+  ${lp-dbg_LIBRARY} 
+  ${sl-dbg_LIBRARY} 
+  ${snlsys-dbg_LIBRARY})
+
 target_link_libraries(rbtty optimized
-  ${font-rsrc_LIBRARY} ${lp_LIBRARY} ${snlsys_LIBRARY})
+  ${font-rsrc_LIBRARY} 
+  ${lp_LIBRARY} 
+  ${sl_LIBRARY}
+  ${snlsys_LIBRARY})
   
 ################################################################################
 # Output files
 ################################################################################
-install(FILES ${RBTTY_FILES_INC} DESTINATION include)
+install(FILES rbtty.h DESTINATION include)
 install(TARGETS rbtty LIBRARY DESTINATION lib)

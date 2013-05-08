@@ -1,6 +1,7 @@
 #ifndef RBTTY_H
 #define RBTTY_H
 
+#include "rbtty_error.h"
 #include <snlsys/snlsys.h>
 
 #if defined(RBTTY_SHARED_BUILD)
@@ -20,14 +21,6 @@ struct mem_allocator;
 struct rb_context;
 struct rbi;
 struct rbtty;
-
-enum rbtty_error
-{
-  RBTTY_INVALID_ARGUMENT,
-  RBTTY_MEMORY_ERROR,
-  RBTTY_NO_ERROR,
-  RBTTY_UNKNOWN_ERROR
-};
 
 #ifdef __cplusplus
 extern "C" {
