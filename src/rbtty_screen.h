@@ -5,6 +5,7 @@
 #include <snlsys/snlsys.h>
 #include <snlsys/list.h>
 
+struct mem_allocator;
 struct sl_wstring;
 struct sl_vector;
 
@@ -20,8 +21,9 @@ struct rbtty_line {
 
 struct rbtty_screen {
   /* Free list of lines */
-  struct list_node line_list_free;
-  struct list_node line_list_stdout;
+  struct list_node lines_list_free;
+  struct list_node lines_list_stdout;
+  struct rbtty_line* lines_list;
   /* tty field */
   struct rbtty_text prompt;
   struct rbtty_line* outbuf;
@@ -43,6 +45,11 @@ rbtty_screen_init
 extern LOCAL_SYM enum rbtty_error
 rbtty_screen_shutdown
   (struct rbtty_screen* screen);
+
+extern LOCAL_SYM enum rbtty_error
+rbtty_screen_storage
+  (struct rbtty_screen* screen,
+   const int lines_count_per_screen); 
 
 #endif /* RBTTY_SCREEN_H */
 

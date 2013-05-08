@@ -1,6 +1,7 @@
 #include "rbtty_screen.h"
 #include <sl/sl_vector.h>
 #include <sl/sl_wstring.h>
+#include <snlsys/mem_allocator.h>
 #include <string.h>
 
 /*******************************************************************************
@@ -26,8 +27,23 @@ sl_to_rbtty_error(const enum sl_error sl_err)
  * rbtty_text functions
  *
  ******************************************************************************/
+static void
+text_shutdown(struct mem_allocator* allocator, struct rbtty_text* text)
+{
+  ASSERT(allocator && text);
+
+  if(text->string) {
+    SL(free_wstring(text->string));
+    text->string = NULL;
+  }
+  if(text->color) {
+    SL(free_vector(text->color));
+    text->color = NULL;
+  }
+}
+
 static enum rbtty_error
-rbtty_text_init(struct mem_allocator* allocator, struct rbtty_text* text)
+text_init(struct mem_allocator* allocator, struct rbtty_text* text)
 {
   enum rbtty_error rbtty_err = RBTTY_NO_ERROR;
   ASSERT(allocator && text);
@@ -47,15 +63,36 @@ rbtty_text_init(struct mem_allocator* allocator, struct rbtty_text* text)
 exit:
   return rbtty_err;
 error:
-  if(text->string) {
-    SL(free_wstring(text->string));
-    text->string = NULL;
-  }
-  if(text->color) {
-    SL(free_vector(text->color));
-    text->color = NULL;
-  }
+  text_shutdown(allocator, text);
   goto exit;
+}
+
+/*******************************************************************************
+ *
+ * Helper functions
+ *
+ ******************************************************************************/
+static void
+screen_reset_storage(struct rbtty_screen* scr)
+{
+  ASSERT(scr);
+
+  FOR_EACH(int, i, 0, scr->lines_count) {
+    text_shutdown(scr->allocator, &scr->lines_list[i].text);
+  }
+  if(scr->lines_list) {
+    MEM_FREE(scr->allocator, scr->lines_list);
+    scr->lines_list = NULL;
+  }
+  list_init(&scr->lines_list_free);
+  list_init(&scr->lines_list_stdout);
+  scr->lines_list = NULL;
+  scr->outbuf = NULL;
+  scr->cmdbuf = NULL;
+  scr->lines_count = 0;
+  scr->lines_count_per_screen = 0;
+  scr->scroll_id = 0;
+  scr->cursor = 0;
 }
 
 /*******************************************************************************
@@ -69,17 +106,19 @@ rbtty_screen_init(struct mem_allocator* allocator, struct rbtty_screen* scr)
   ASSERT(allocator && scr);
 
   memset(scr, 0, sizeof(struct rbtty_screen));
-  list_init(&scr->line_list_free);
-  list_init(&scr->line_list_stdout);
+  list_init(&scr->lines_list_free);
+  list_init(&scr->lines_list_stdout);
   scr->allocator = allocator;
 
-  return rbtty_text_init(scr->allocator, &scr->prompt);
+  return text_init(scr->allocator, &scr->prompt);
 }
 
 enum rbtty_error
 rbtty_screen_shutdown(struct rbtty_screen* scr)
 {
   ASSERT(scr);
-  ASSERT(0); /* TODO */
+  screen_reset_storage(scr);
+  text_shutdown(scr->allocator, &scr->prompt);
   return RBTTY_UNKNOWN_ERROR;
 }
+
