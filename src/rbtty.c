@@ -1,4 +1,5 @@
 #include "rbtty.h"
+#include "rbtty_screen.h"
 #include <font_rsrc.h>
 #include <lp/lp.h>
 #include <lp/lp_font.h>
@@ -12,6 +13,7 @@
 
 #define TO_UPPER_font FONT
 #define TO_UPPER_lp LP
+#define TO_UPPER_rbtty RBTTY
 #define TO_UPPER( x ) TO_UPPER_ ## x
 
 struct rbtty {
@@ -30,6 +32,9 @@ struct rbtty {
   /* Resource */
   struct font_system* font_sys;
   struct font_rsrc* font_rsrc;
+
+  /* Internal data */
+  struct rbtty_screen screen;
 };
 
 /*******************************************************************************
@@ -45,9 +50,11 @@ static const wchar_t rbtty_charset[] =
 
 /*******************************************************************************
  *
- * Helper functions
+ * Helper functions/macros
  *
  ******************************************************************************/
+#define rbtty_to_rbtty_error(err) err
+
 static enum rbtty_error
 lp_to_rbtty_error(const enum lp_error lp_err)
 {
@@ -93,6 +100,8 @@ release_rbtty(struct ref* ref)
     FONT(system_ref_put(tty->font_sys));
   if(tty->font_rsrc)
     FONT(rsrc_ref_put(tty->font_rsrc));
+
+  RBTTY(screen_shutdown(&tty->screen));
 
   MEM_FREE(tty->allocator, tty);
 }
@@ -148,8 +157,12 @@ rbtty_create
   FUNC(lp, font_create(tty->lp, &tty->font));
   FUNC(lp, printer_create(tty->lp, &tty->printer));
   FUNC(lp, printer_set_font(tty->printer, tty->font));
+
   FUNC(font, system_create(tty->allocator, &tty->font_sys));
   FUNC(font, rsrc_create(tty->font_sys, NULL, &tty->font_rsrc));
+
+  FUNC(rbtty, screen_init(tty->allocator, &tty->screen));
+  FUNC(rbtty, screen_storage(&tty->screen, 8192));
   #undef FUNC
 
 exit:

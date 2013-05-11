@@ -2,6 +2,7 @@
 #define RBTTY_H
 
 #include "rbtty_error.h"
+#include "rbtty_types.h"
 #include <snlsys/snlsys.h>
 
 #if defined(RBTTY_SHARED_BUILD)

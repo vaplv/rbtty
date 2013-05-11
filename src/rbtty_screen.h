@@ -2,6 +2,7 @@
 #define RBTTY_SCREEN_H
 
 #include "rbtty_error.h"
+#include "rbtty_types.h"
 #include <snlsys/snlsys.h>
 #include <snlsys/list.h>
 
@@ -32,7 +33,6 @@ struct rbtty_screen {
   struct mem_allocator* allocator;
   /* screen data */
   int lines_count;
-  int lines_count_per_screen;
   int scroll_id;
   int cursor;
 };
