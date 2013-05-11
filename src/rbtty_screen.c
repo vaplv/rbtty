@@ -1,6 +1,7 @@
 #include "rbtty_screen.h"
 #include <sl/sl_vector.h>
 #include <sl/sl_wstring.h>
+#include <snlsys/math.h>
 #include <snlsys/mem_allocator.h>
 #include <limits.h>
 #include <string.h>
@@ -16,6 +17,7 @@ sl_to_rbtty_error(const enum sl_error sl_err);
 static void
 text_shutdown(struct mem_allocator* allocator, struct rbtty_text* text)
 {
+  (void)allocator;
   ASSERT(allocator && text);
 
   if(text->string) {
@@ -226,3 +228,109 @@ error:
   goto exit;
 }
 
+enum rbtty_error
+rbtty_screen_translate_cursor(struct rbtty_screen* scr, const int trans)
+{
+  ASSERT(scr);
+
+  if(trans == 0)
+    return RBTTY_NO_ERROR;
+
+  if(trans < 0) {
+    size_t prompt_len = 0;
+    const int x = -trans;
+
+    SL(wstring_length(scr->prompt.string, &prompt_len));
+    ASSERT(scr->cursor >= (int)prompt_len);
+    scr->cursor -= MIN(x, scr->cursor - (int)prompt_len);
+  } else {
+    size_t len = 0;
+    const int x = trans;
+
+    SL(wstring_length(scr->cmdbuf->text.string, &len));
+    ASSERT((int)len >= scr->cursor);
+    scr->cursor += MIN(x, (int)len - scr->cursor);
+  }
+
+  return RBTTY_NO_ERROR;
+}
+
+enum rbtty_error
+rbtty_screen_print_wstring
+  (struct rbtty_screen* scr,
+   const enum rbtty_output output,
+   const wchar_t* str,
+   const float color[3])
+{
+  size_t len = 0;
+  enum rbtty_error rbtty_err = RBTTY_NO_ERROR;
+
+  ASSERT(scr && str && color);
+
+  len = wcslen(str);
+
+  #define CALL(func)                                                           \
+    {                                                                          \
+      const enum sl_error sl_err = func;                                       \
+      if(sl_err != SL_NO_ERROR) {                                              \
+        rbtty_err = sl_to_rbtty_error(sl_err);                                 \
+        goto error;                                                            \
+      }                                                                        \
+    } (void) 0
+  if(output == RBTTY_PROMPT) {
+    size_t plen = 0;
+
+    SL(vector_buffer(scr->prompt.color, &plen, NULL, NULL, NULL));
+    CALL(sl_wstring_append(scr->prompt.string, str));
+    CALL(sl_vector_push_back_n(scr->prompt.color, len, color));
+
+    if(scr->cmdbuf) {
+      CALL(sl_wstring_insert(scr->cmdbuf->text.string, plen, str));
+      CALL(sl_vector_insert_n(scr->cmdbuf->text.color, plen, len, color));
+    }
+    scr->cursor += (int)len;
+
+  } else if(scr->lines_count > 0) {
+    const size_t cursor = (size_t)scr->cursor;
+    struct rbtty_line* line = NULL;
+
+    if(output == RBTTY_CMDOUT) {
+      line = scr->cmdbuf;
+      CALL(sl_wstring_insert(line->text.string, cursor, str));
+      CALL(sl_vector_insert_n(line->text.color, cursor, len, color));
+      scr->cursor += (int)len;
+
+    } else { ASSERT(output == RBTTY_STDOUT);
+      wchar_t* tkn = NULL;
+      wchar_t* str_end = NULL;
+
+      if(len + 1 /* +1 <=> \0 */ > sizeof(scr->scratch)/sizeof(wchar_t)) {
+        rbtty_err = RBTTY_MEMORY_ERROR;
+        goto error;
+      }
+      wcscpy(scr->scratch, str);
+      tkn = scr->scratch;
+      str_end = scr->scratch + len;
+      while((uintptr_t)tkn < (uintptr_t)str_end) {
+        wchar_t* tkn_end = wcschr(tkn, L'\n');
+        if(tkn_end) {
+          *tkn_end = L'\0';
+        }
+        const size_t tkn_len = wcslen(tkn);
+        line = scr->outbuf;
+        CALL(sl_wstring_append(line->text.string, tkn));
+        CALL(sl_vector_push_back_n(line->text.color, tkn_len, color));
+        tkn += tkn_len + 1; /* +1 <=> \0 */
+        if(tkn_end) {
+          screen_new_buf(scr, RBTTY_STDOUT);
+        }
+      }
+    }
+  }
+  #undef CALL
+
+exit:
+  return rbtty_err;
+error:
+  goto exit;
+}

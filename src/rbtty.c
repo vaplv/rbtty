@@ -283,3 +283,23 @@ rbtty_set_viewport
     (lp_printer_set_viewport(tty->printer, x, y, width, height));
 }
 
+enum rbtty_error
+rbtty_translate_cursor(struct rbtty* tty, const int x)
+{
+  if(UNLIKELY(!tty))
+    return RBTTY_INVALID_ARGUMENT;
+  return rbtty_screen_translate_cursor(&tty->screen, x);
+}
+
+enum rbtty_error
+rbtty_print_wstring
+  (struct rbtty* tty, 
+   const enum rbtty_output output,
+   const wchar_t* str,
+   const float color[3])
+{
+  if(UNLIKELY(!tty || !str || !color))
+    return RBTTY_INVALID_ARGUMENT;
+  return rbtty_screen_print_wstring(&tty->screen, output, str, color);
+}
+

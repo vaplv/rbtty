@@ -55,6 +55,18 @@ rbtty_set_viewport
    const int width,
    const int height);
 
+RBTTY_API enum rbtty_error
+rbtty_translate_cursor
+  (struct rbtty* tty,
+   const int x);
+
+RBTTY_API enum rbtty_error
+rbtty_print_wstring
+  (struct rbtty* tty,
+   const enum rbtty_output output,
+   const wchar_t* str,
+   const float color[3]);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

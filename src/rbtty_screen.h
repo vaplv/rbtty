@@ -21,6 +21,7 @@ struct rbtty_line {
 };
 
 struct rbtty_screen {
+  wchar_t scratch[BUFSIZ];
   /* Free list of lines */
   struct list_node lines_list_free;
   struct list_node lines_list_stdout;
@@ -50,6 +51,18 @@ extern LOCAL_SYM enum rbtty_error
 rbtty_screen_storage
   (struct rbtty_screen* screen,
    const int lines_count_per_screen); 
+
+extern LOCAL_SYM enum rbtty_error
+rbtty_screen_translate_cursor
+  (struct rbtty_screen* screen,
+   const int x);
+
+extern LOCAL_SYM enum rbtty_error
+rbtty_screen_print_wstring
+  (struct rbtty_screen* screen,
+   const enum rbtty_output output,
+   const wchar_t* str,
+   const float color[3]);
 
 #endif /* RBTTY_SCREEN_H */
 
